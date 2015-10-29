@@ -2,9 +2,11 @@
 __pycache__/
 *.py[cod]
 
+# Node.js
+*node_modules/
+
 # C extensions
 *.so
-
 # Distribution / packaging
 .Python
 env/
