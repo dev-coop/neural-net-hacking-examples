@@ -32,7 +32,7 @@ class Neuron(object):
         else:
             # Otherwise we're a normal neuron
             for connection in self.incoming_neurons:
-                sum += (connection.neuron.sum_inputs * connection.weight)
+                sum += connection.neuron.sum_inputs * connection.weight
         return sum
 
 
