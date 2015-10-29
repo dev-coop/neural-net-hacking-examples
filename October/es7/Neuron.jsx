@@ -17,9 +17,7 @@ class Neuron {
   output = 0;
   incoming = [];
   outgoing = [];
-  activationFn = inputVal => {
-    return 1 / (1 + Math.exp(-inputVal));
-  };
+  activationFn = inputVal => 1 / (1 + Math.exp(-inputVal));
 
   activate(value) {
     this.input = value || _.sum(this.incoming, connection => {
