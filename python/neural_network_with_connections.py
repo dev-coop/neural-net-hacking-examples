@@ -11,6 +11,7 @@ class Neuron(object):
 
     def __init__(self, input=None):
         self.input = input
+        self.output = None
         self.incoming_neurons = []
         self.outgoing_neurons = []
 
@@ -32,17 +33,19 @@ class Neuron(object):
         else:
             # Otherwise we're a normal neuron
             for connection in self.incoming_neurons:
-                sum += connection.neuron.sum_inputs * connection.weight
+                if connection.neuron.output == None:
+                    connection.neuron.activate()
+                sum += connection.neuron.output * connection.weight
         return sum
 
 
 # TODO: NOT gate
 # inputs 0 or 1 returns opposite, 1 and 0 respectively
-neuron = Neuron(input=1)
-neuron_2 = Neuron()
-
-neuron.connect_child(neuron_2, weight=1)
-
-neuron_2.activate()
-
-print "Output:", neuron_2.output
+# neuron = Neuron(input=0)
+# neuron_2 = Neuron()
+#
+# neuron.connect_child(neuron_2, weight=1)
+#
+# neuron_2.activate()
+#
+# print "Output:", neuron_2.output
