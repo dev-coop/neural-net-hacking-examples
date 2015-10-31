@@ -1,3 +1,6 @@
+// This file is written in ES7 and requires a compiler, like babel
+// https://babeljs.io/
+
 import _ from 'lodash';
 
 ///////////////////////////////////////////////////
