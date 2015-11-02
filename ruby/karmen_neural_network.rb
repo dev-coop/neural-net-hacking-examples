@@ -27,7 +27,7 @@ class Neuron
 
   def activate(value = nil)
     input = value || incoming.reduce(0) do |sum, connection|
-      sum + connection.source.output
+      sum + connection.source.output * connection.weight
     end
 
     @output = activation_function(input)
