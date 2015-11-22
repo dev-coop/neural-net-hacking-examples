@@ -11,8 +11,9 @@ class NeuralNetworkTests(TestCase):
         neuron = Neuron(input=0)
         neuron_2 = Neuron()
         neuron.connect_child(neuron_2, weight=1)
-        assert any(neuron == connection.neuron for connection in neuron_2.incoming_neurons)
-        assert any(neuron_2 == connection.neuron for connection in neuron.outgoing_neurons)
+        # Make sure there's only one connection back and forth
+        assert [neuron == connection.neuron for connection in neuron_2.incoming_neurons].count(True) == 1
+        assert [neuron_2 == connection.neuron for connection in neuron.outgoing_neurons].count(True) == 1
 
     def test_activate_applies_proper_math(self):
         '''Let's make sure the sigmoid function is working properly, 0 * 0 weight should be 0.5'''
