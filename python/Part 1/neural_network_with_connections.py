@@ -41,11 +41,12 @@ class Neuron(object):
 
 # TODO: NOT gate
 # inputs 0 or 1 returns opposite, 1 and 0 respectively
-# neuron = Neuron(input=0)
-# neuron_2 = Neuron()
-#
-# neuron.connect_child(neuron_2, weight=1)
-#
-# neuron_2.activate()
-#
-# print "Output:", neuron_2.output
+if __name__ == "__main__":
+    neuron = Neuron(input=0)
+    neuron_2 = Neuron()
+
+    neuron.connect_child(neuron_2, weight=1)
+
+    neuron_2.activate()
+
+    print "Output:", neuron_2.output
