@@ -1,10 +1,10 @@
 class Connection
-  attr_reader :source
+  attr_reader :source, :weight
 
   def initialize(source, target)
     @source = source # neuron
     @target = target # neuron
-    @weight = 0.5
+    @weight = rand
   end
 
   def to_s
@@ -26,7 +26,7 @@ class Neuron
   end
 
   def activate(value = nil)
-    input = value || incoming.reduce(0) do |sum, connection|
+    @input = value || incoming.reduce(0) do |sum, connection|
       sum + connection.source.output * connection.weight
     end
 
@@ -40,12 +40,71 @@ class Neuron
   end
 end
 
+class Layer
+  attr_accessor :neurons
+
+  def initialize(size)
+     @neurons = Array.new(size) { Neuron.new }
+  end
+
+  def activate(values = nil)
+    values = Array(values) # coerce it to an array if nil
+
+    @neurons.each_with_index do |neuron, index|
+      neuron.activate(values[index])
+    end
+  end
+
+  def connect(target_layer)
+    @neurons.each do |source_neuron|
+      target_layer.neurons.each do |target_neuron|
+        source_neuron.connect(target_neuron)
+      end
+    end
+  end
+end
+
+
+class Network
+  attr_accessor :input_layer, :output_layer, :hidden_layers
+
+  def initialize(sizes)
+    @input_layer    = Layer.new(sizes.shift)
+    @output_layer   = Layer.new(sizes.pop)
+    @hidden_layers  = sizes.map{|s| Layer.new(s)}
+  
+    connect_layers
+  end
+
+
+  def activate(inputValues)
+    @input_layer.activate(inputValues)
+    @hidden_layers.each {|hidden_layer| hidden_layer.activate }
+    @output_layer.activate
+  end
+
+  private
+
+  def connect_layers
+    layers = [
+      [@input_layer],
+      @hidden_layers,
+      [@output_layer]
+    ].flatten
+
+    layers.each_with_index do |layer, index|
+      nextIndex = index + 1
+
+      if layers[nextIndex]
+        layer.connect(layers[nextIndex])
+      end
+    end
+  end
+end
+
 
 neuronA = Neuron.new
 neuronB = Neuron.new
-#neuronA.input = 2
-#neuronA.activate(10)
-#puts neuronA.output
 
 neuronA.connect(neuronB)
 
@@ -55,5 +114,64 @@ puts neuronA.output
 neuronB.activate
 puts neuronB.output
 
-#puts neuronA.outgoing
-#puts neuronB.incoming
+
+inputs = [1,1,1]
+layer = Layer.new(inputs.size)
+puts layer.neurons
+
+layer.activate(inputs)
+
+layer.neurons.each do |n|
+  puts "input - #{n.input}, out - #{n.output}"
+end
+
+
+###############################################
+input_layer = Layer.new(2)
+output_layer = Layer.new(2)
+
+#puts input_layer.neurons.size
+#puts output_layer.neurons.size
+
+input_layer.connect(output_layer)
+
+input_layer.activate([1,2])
+output_layer.activate
+
+puts
+puts "Input layer - outgoing connections"
+input_layer.neurons.each do |n|
+  puts "in #{n.input}  out #{n.output}"
+end
+
+puts
+puts "Output layer - incoming connections"
+output_layer.neurons.each do |n|
+  puts "in #{n.input}  out #{n.output}"
+end
+
+
+#####################################################
+puts
+puts "*" * 80
+puts "NETWORK"
+net = Network.new([3,2,1])
+net.activate([1,2, 3])
+
+puts "INPUT"
+net.input_layer.neurons.each do |n|
+  puts "in #{n.input}  out #{n.output}"
+end
+
+
+puts "HIDDEN"
+net.hidden_layers.each do |layer|
+  layer.neurons.each do |n|
+    puts "in #{n.input}  out #{n.output}"
+  end
+end
+
+puts "OUTPUT"
+net.output_layer.neurons.each do |n|
+  puts "in #{n.input}  out #{n.output}"
+end
