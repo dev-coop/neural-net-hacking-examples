@@ -4,6 +4,7 @@ __pycache__/
 
 # Node.js
 *node_modules/
+*.log
 
 # C extensions
 *.so
