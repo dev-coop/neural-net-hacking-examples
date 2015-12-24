@@ -13,19 +13,54 @@ class Connection {
 ///////////////////////////////////////////////////
 
 class Neuron {
+  isBias = false
   input = 0
   output = 0
+  error = null
   incoming = []
   outgoing = []
-  // sigmoid
+  learningRate = 0.3
+
+  // sigmoid (range 0, +1)
   activationFn = inputVal => 1 / (1 + Math.exp(-inputVal))
+  activationPrime = inputVal => {
+    const val = 1 / (1 + Math.exp(-this.input))
+    return val * (1 - val)
+  }
+
+  isOutput() {
+    return _.isEmpty(this.outgoing)
+  }
 
   activate(value) {
+    if (this.isBias) return this.output = 1
+
     this.input = value || _.sum(this.incoming, ({source, weight}) => {
         return source.output * weight
       })
     this.output = this.activationFn(this.input)
     return this.output
+  }
+
+  train(targetOutput) {
+    const inputDerivative = this.activationPrime(this.input)
+
+    // set delta
+    if (this.isOutput()) {
+      this.error = targetOutput - this.output
+      this.delta = -this.error * inputDerivative
+    } else {
+      this.delta = _.sum(this.outgoing, ({target, weight}) => {
+        return inputDerivative * weight * target.delta
+      })
+    }
+
+    // update weights
+    _.each(this.outgoing, connection => {
+      const gradient = this.output * connection.target.delta
+
+      connection.weight -= gradient * this.learningRate
+    })
   }
 
   connect(targetNeuron) {
@@ -49,6 +84,12 @@ class Layer {
   }
 
   connect(targetLayer) {
+    if (!_.some(this.neurons, 'isBias')) {
+      const bias = new Neuron()
+      bias.isBias = true
+      this.neurons.push(bias)
+    }
+
     _.each(this.neurons, source => {
       _.each(targetLayer.neurons, target => {
         source.connect(target)
@@ -83,23 +124,22 @@ class Network {
 ///////////////////////////////////////////////////
 // The Test
 
-const net = new Network([3, 2, 1])
+const neuronA = new Neuron()
+const neuronB = new Neuron()
 
-net.activate([1, 2, 3])
+neuronA.connect(neuronB)
 
-console.log('INPUT')
-_.each(net.inputLayer.neurons, neuron => {
-  console.log(`in ${neuron.input} out ${neuron.output}`)
-})
+const epochs = 9999
+const trainingLogs = 100
 
-console.log('HIDDEN')
-_.each(net.hiddenLayers, layer => {
-  _.each(layer.neurons, neuron => {
-    console.log(`in ${neuron.input} out ${neuron.output}`)
-  })
-})
+_.times(epochs, (n) => {
+  neuronA.activate(2)
+  neuronB.activate()
 
-console.log('OUTPUT')
-_.each(net.outputLayer.neurons, neuron => {
-  console.log(`in ${neuron.input} out ${neuron.output}`)
+  neuronB.train(1)
+  neuronA.train()
+
+  if (n === 0 || n % (epochs / trainingLogs) === 0) {
+    console.log(`epoch: ${n} error: ${neuronB.error}`)
+  }
 })
