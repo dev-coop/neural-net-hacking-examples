@@ -24,6 +24,7 @@ class Connection {
 }
 
 ///////////////////////////////////////////////////
+// Neuron
 
 class Neuron {
   isBias = false
@@ -155,6 +156,7 @@ class Network {
 
 ///////////////////////////////////////////////////
 // Trainer
+
 class Trainer {
   constructor(network, data) {
     this.network = network
