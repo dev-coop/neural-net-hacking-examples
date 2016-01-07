@@ -1,6 +1,19 @@
 import _ from 'lodash'
 
 ///////////////////////////////////////////////////
+// Data
+
+const DATA = {
+  ORGate: [
+    {input: [0, 0], output: [0]},
+    {input: [0, 1], output: [1]},
+    {input: [1, 0], output: [1]},
+    {input: [1, 1], output: [1]},
+  ]
+}
+
+///////////////////////////////////////////////////
+// Connection
 
 class Connection {
   constructor(source, target) {
@@ -16,49 +29,43 @@ class Neuron {
   isBias = false
   input = 0
   output = 0
-  error = null
+  delta = 0
   incoming = []
   outgoing = []
   learningRate = 0.3
 
   // sigmoid (range 0, +1)
   activationFn = inputVal => 1 / (1 + Math.exp(-inputVal))
-  activationPrime = inputVal => {
-    const val = 1 / (1 + Math.exp(-this.input))
-    return val * (1 - val)
-  }
 
   isOutput() {
     return _.isEmpty(this.outgoing)
   }
 
+  isInput() {
+    return _.isEmpty(this.incoming)
+  }
+
   activate(value) {
     if (this.isBias) return this.output = 1
 
-    this.input = value || _.sum(this.incoming, ({source, weight}) => {
-        return source.output * weight
-      })
-    this.output = this.activationFn(this.input)
-    return this.output
+    this.input = value || _.sum(this.incoming, ({source, weight}) => source.output * weight)
+    return this.output = this.activationFn(this.input)
   }
 
   train(targetOutput) {
-    const inputDerivative = this.activationPrime(this.input)
-
-    // set delta
-    if (this.isOutput()) {
-      this.error = targetOutput - this.output
-      this.delta = -this.error * inputDerivative
-    } else {
-      this.delta = _.sum(this.outgoing, ({target, weight}) => {
-        return inputDerivative * weight * target.delta
-      })
+    if (!this.isBias && !this.isInput()) {
+      if (this.isOutput()) {
+        // this is the derivative of the error function, not simply the difference in output
+        // http://whiteboard.ping.se/MachineLearning/BackProp
+        this.delta = this.output - targetOutput
+      } else {
+        this.delta = _.sum(this.outgoing, ({target, weight}) => weight * target.delta)
+      }
     }
 
     // update weights
     _.each(this.outgoing, connection => {
       const gradient = this.output * connection.target.delta
-
       connection.weight -= gradient * this.learningRate
     })
   }
@@ -71,16 +78,19 @@ class Neuron {
 }
 
 ///////////////////////////////////////////////////
+// Layer
 
 class Layer {
   constructor(size) {
     this.neurons = _.times(size, n => new Neuron())
   }
 
-  activate(values) {
-    _.each(this.neurons, (neuron, index) => {
-      neuron.activate(values && values[index])
-    })
+  activate(inputValues = []) {
+    return _.map(this.neurons, (neuron, index) => neuron.activate(inputValues[index]))
+  }
+
+  train(targetOutputs = []) {
+    _.each(this.neurons, (neuron, index) => neuron.train(targetOutputs[index]))
   }
 
   connect(targetLayer) {
@@ -99,6 +109,7 @@ class Layer {
 }
 
 ///////////////////////////////////////////////////
+// Network
 
 class Network {
   constructor(sizes) {
@@ -106,6 +117,13 @@ class Network {
     this.inputLayer = _.first(this.layers)
     this.outputLayer = _.last(this.layers)
     this.hiddenLayers = _.slice(this.layers, 1, this.layers.length - 1)
+    this.error = 0
+
+    this.errorFn = (targetOutputs) => {
+      return _.sum(this.outputLayer.neurons, (neuron, i) => {
+          return 0.5 * Math.pow(targetOutputs[i] - neuron.output, 2)
+        }) / this.outputLayer.neurons.length
+    }
 
     _.each(this.layers, (layer, index) => {
       const nextIndex = ++index;
@@ -117,29 +135,54 @@ class Network {
   activate(inputValues) {
     this.inputLayer.activate(inputValues)
     _.invoke(this.hiddenLayers, 'activate')
-    this.outputLayer.activate()
+    return this.outputLayer.activate()
+  }
+
+  train(targetOutputs) {
+    this.outputLayer.train(targetOutputs)
+
+    // set the new network error after training
+    this.error = this.errorFn(targetOutputs)
+
+    // hidden layers in reverse
+    for (let i = this.hiddenLayers.length; i > 1; i--) {
+      this.hiddenLayers[i].train()
+    }
+
+    this.inputLayer.train()
+  }
+}
+
+///////////////////////////////////////////////////
+// Trainer
+class Trainer {
+  constructor(network, data) {
+    this.network = network
+    this.data = data
+  }
+
+  train(options) {
+    const {epochs, logFreq} = options
+    const {network, data} = this
+
+    _.times(epochs, epoch => {
+      const avgError = _.sum(data, sample => {
+        network.activate(sample.input)
+        network.train(sample.output)
+        return network.error / data.length
+      })
+
+      if (epoch % logFreq === 0 || epoch + 1 === epochs) {
+        console.log(`epoch: ${epoch} error: ${avgError}`)
+      }
+    })
   }
 }
 
 ///////////////////////////////////////////////////
 // The Test
 
-const neuronA = new Neuron()
-const neuronB = new Neuron()
+const network = new Network([2, 1])
+const trainer = new Trainer(network, DATA.ORGate)
 
-neuronA.connect(neuronB)
-
-const epochs = 9999
-const trainingLogs = 100
-
-_.times(epochs, (n) => {
-  neuronA.activate(2)
-  neuronB.activate()
-
-  neuronB.train(1)
-  neuronA.train()
-
-  if (n === 0 || n % (epochs / trainingLogs) === 0) {
-    console.log(`epoch: ${n} error: ${neuronB.error}`)
-  }
-})
+trainer.train({epochs: 10000, logFreq: 1000})
